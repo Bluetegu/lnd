@@ -414,6 +414,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "private",
+            "description": "*\nWhether private channels should be returned or not. If set,\nprivate channels are returned.",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "format": "boolean"
+          }
+        ],
         "tags": [
           "Lightning"
         ]

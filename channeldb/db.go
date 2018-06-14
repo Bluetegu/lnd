@@ -12,6 +12,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/coreos/bbolt"
 	"github.com/go-errors/errors"
+	"github.com/lightningnetwork/lnd/lnwire"
 )
 
 const (
@@ -532,6 +533,38 @@ func fetchChannels(d *DB, pending, waitingClose bool) ([]*OpenChannel, error) {
 	}
 
 	return channels, nil
+}
+
+// FetchPrivateOpenChannelIDs will return a map with the IDs of all open
+// private channels, which can be used for checking if an edge in the
+// graph is private or not.
+// IDs of both 'default' open channels and 'waiting to be closed' private
+// channels are returned. IDs of pending opened channels are not returned,
+// as those are not yet advertised to the graph.
+func (d *DB) FetchPrivateOpenChannelIDs() (map[uint64]bool, error) {
+	var err error
+	var privateChannelIDs = map[uint64]bool{}
+	var channels, openChannels, waitingCloseChannels []*OpenChannel
+
+	// Get open channels
+	if openChannels, err = d.FetchAllOpenChannels(); err != nil {
+		return privateChannelIDs, err
+	}
+	// Get waiting to be closed channels
+	if waitingCloseChannels, err = d.FetchWaitingCloseChannels(); err != nil {
+		return privateChannelIDs, err
+	}
+	channels = append(openChannels, waitingCloseChannels...)
+
+	// run over all channels and add the IDs of the private ones to the map
+	for _, channel := range channels {
+		if channel.ChannelFlags&lnwire.FFAnnounceChannel == 0 {
+			channelID := channel.ShortChannelID.ToUint64()
+			privateChannelIDs[channelID] = true
+		}
+	}
+
+	return privateChannelIDs, nil
 }
 
 // FetchClosedChannels attempts to fetch all closed channels from the database.

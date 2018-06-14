@@ -1483,6 +1483,11 @@ message ChannelEdge {
 }
 
 message ChannelGraphRequest {
+     /**
+     Whether private channels should be returned or not. If set,
+     private channels are returned.
+     */
+     bool private = 1 [json_name = "private"];
 }
 
 /// Returns a new instance of the directed channel graph.

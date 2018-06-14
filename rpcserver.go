@@ -3043,14 +3043,16 @@ func (r *rpcServer) GetTransactions(ctx context.Context,
 // specific routing policy which includes: the time lock delta, fee
 // information, etc.
 func (r *rpcServer) DescribeGraph(ctx context.Context,
-	_ *lnrpc.ChannelGraphRequest) (*lnrpc.ChannelGraph, error) {
+	req *lnrpc.ChannelGraphRequest) (*lnrpc.ChannelGraph, error) {
 
 	resp := &lnrpc.ChannelGraph{}
+	private := req.Private
 
 	// Obtain the pointer to the global singleton channel graph, this will
 	// provide a consistent view of the graph due to bolt db's
 	// transactional model.
-	graph := r.server.chanDB.ChannelGraph()
+	db := r.server.chanDB
+	graph := db.ChannelGraph()
 
 	// First iterate through all the known nodes (connected or unconnected
 	// within the graph), collating their current state into the RPC
@@ -3080,14 +3082,33 @@ func (r *rpcServer) DescribeGraph(ctx context.Context,
 		return nil, err
 	}
 
+	// Get list of private channels
+	privateChannelIDs := map[uint64]bool{}
+	if !private {
+		privateChannelIDs, err = db.FetchPrivateOpenChannelIDs()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Next, for each active channel we know of within the graph, create a
 	// similar response which details both the edge information as well as
 	// the routing policies of th nodes connecting the two edges.
 	err = graph.ForEachChannel(func(edgeInfo *channeldb.ChannelEdgeInfo,
 		c1, c2 *channeldb.ChannelEdgePolicy) error {
 
-		edge := marshalDbEdge(edgeInfo, c1, c2)
-		resp.Edges = append(resp.Edges, edge)
+		// Do not include private channels unless specifically
+		// requested.
+		// A private channel does not need an authentication proof,
+		// while an advertized channel must have one. However in some
+		// situations, and specificatlly in integration tests, public
+		// channels do have nill proofs, so instead check whether the
+		// edge has an associated local private channel.
+		if private || !privateChannelIDs[edgeInfo.ChannelID] {
+			edge := marshalDbEdge(edgeInfo, c1, c2)
+			resp.Edges = append(resp.Edges, edge)
+		}
+
 		return nil
 	})
 	if err != nil && err != channeldb.ErrGraphNoEdgesFound {

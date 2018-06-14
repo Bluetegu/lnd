@@ -4433,7 +4433,7 @@ func testPrivateChannels(net *lntest.NetworkHarness, t *harnessTest) {
 	// Bob and Dave should only know about 3, since one channel is
 	// private.
 	numChannels := func(node *lntest.HarnessNode) int {
-		req := &lnrpc.ChannelGraphRequest{}
+		req := &lnrpc.ChannelGraphRequest{Private: true}
 		ctxt, _ := context.WithTimeout(ctxb, timeout)
 		chanGraph, err := node.DescribeGraph(ctxt, req)
 		if err != nil {
