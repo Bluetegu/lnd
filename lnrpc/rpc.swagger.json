@@ -421,6 +421,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "include_unannounced",
+            "description": "*\nWhether unannounced channels are included in the response or \nnot. If set, unannounced channels are included.\nUnannounced channels are both private channels, and public\nchannels that are not yet announced to the network.",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "format": "boolean"
+          }
+        ],
         "tags": [
           "Lightning"
         ]
