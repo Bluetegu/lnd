@@ -26,6 +26,8 @@ import (
 	"github.com/btcsuite/btcwallet/waddrmgr"
 	"github.com/coreos/bbolt"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/protobuf/proto"
+	mware "github.com/grpc-ecosystem/go-grpc-middleware"
 	proxy "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/lightningnetwork/lnd/autopilot"
 	"github.com/lightningnetwork/lnd/build"
@@ -386,6 +388,32 @@ type rpcServer struct {
 // LightningServer gRPC service.
 var _ lnrpc.LightningServer = (*rpcServer)(nil)
 
+var enableCache = true
+
+// cacheUnitaryServerInterceptor
+func cacheUnitaryServerInterceptor() grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{},
+		info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (
+		resp interface{}, err error) {
+
+		if !enableCache {
+			return handler(ctx, req)
+		}
+
+		rpcsLog.Debugf("gRPC dump: Incoming info %v", spew.Sdump(info))
+		rpcsLog.Debugf("gRPC dump: Incoming request %v", spew.Sdump(req.(proto.Message)))
+
+		start := time.Now()
+		resp, err = handler(ctx, req)
+		elapsed := time.Since(start)
+
+		rpcsLog.Debugf("gRPC dump: Processing took %s", elapsed)
+		rpcsLog.Debugf("gRPC dump: Incoming request %v", spew.Sdump(resp.(proto.Message)))
+
+		return resp, err
+	}
+}
+
 // newRPCServer creates and returns a new instance of the rpcServer. The
 // rpcServer will handle creating all listening sockets needed by it, and any
 // of the sub-servers that it maintains. The set of serverOpts should be the
@@ -449,10 +477,16 @@ func newRPCServer(s *server, macService *macaroons.Service,
 	// authentication in a single location .
 	if macService != nil {
 		unaryInterceptor := grpc.UnaryInterceptor(
-			macService.UnaryServerInterceptor(permissions),
+			mware.ChainUnaryServer(
+				macService.UnaryServerInterceptor(permissions),
+				cacheUnitaryServerInterceptor(),
+			),
 		)
+
 		streamInterceptor := grpc.StreamInterceptor(
-			macService.StreamServerInterceptor(permissions),
+			mware.ChainStreamServer(
+				macService.StreamServerInterceptor(permissions),
+			),
 		)
 
 		serverOpts = append(serverOpts,

@@ -18,6 +18,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7 // indirect
 	github.com/go-errors/errors v1.0.1
 	github.com/golang/protobuf v1.2.0
+	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/grpc-ecosystem/grpc-gateway v0.0.0-20170724004829-f2862b476edc
 	github.com/hpcloud/tail v1.0.0 // indirect
 	github.com/jackpal/gateway v1.0.4
