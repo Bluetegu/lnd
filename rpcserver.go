@@ -401,14 +401,14 @@ func cacheUnitaryServerInterceptor() grpc.UnaryServerInterceptor {
 		}
 
 		rpcsLog.Debugf("gRPC dump: Incoming info %v", info.FullMethod)
-		rpcsLog.Debugf("gRPC dump: Incoming request %v", spew.Sdump(req.(proto.Message).String()))
+		rpcsLog.Debugf("gRPC dump: Incoming request %s", req.(proto.Message).String())
 
 		start := time.Now()
 		resp, err = handler(ctx, req)
 		elapsed := time.Since(start)
 
 		rpcsLog.Debugf("gRPC dump: Processing took %s", elapsed)
-		rpcsLog.Debugf("gRPC dump: Incoming request %v", spew.Sdump(resp.(proto.Message).String()))
+		rpcsLog.Debugf("gRPC dump: Incoming request %s", resp.(proto.Message).String())
 
 		return resp, err
 	}
